@@ -1,20 +1,25 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, type OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, type OnInit } from '@angular/core';
 import { ButtonModule } from "primeng/button";
-import { InputTextModule } from "primeng/inputtext";
-import { InputGroupModule } from 'primeng/inputgroup';
-import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
-import { AvailablePayMethodsService } from './service';
+import { AvailablePayMethodsService, MeterService } from './service';
+import { MeterFormComponent, PaymentMethodsComponent, RechargeInfoComponent } from './components';
+import { DialogModule } from "primeng/dialog";
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
+
 
 @Component({
   selector: 'app-home',
   standalone: true,
+  providers: [MessageService],
   imports: [
     CommonModule,
     ButtonModule,
-    InputTextModule,
-    InputGroupModule,
-    InputGroupAddonModule
+    MeterFormComponent,
+    DialogModule,
+    ToastModule,
+    PaymentMethodsComponent,
+    RechargeInfoComponent
   ],
   template: `
   
@@ -43,29 +48,7 @@ import { AvailablePayMethodsService } from './service';
                 <p class=" mb-0 title">Recarga de saldo</p>
               </div>
               <!-- formulario -->
-               <form autocomplete="off">
-                  <!-- serial del medidor -->
-                   <div class="mb-6 input-container p-fluid">
-                      <p-inputGroup>
-                          <p-inputGroupAddon>
-                            <i class="pi pi-calculator"></i>
-                          </p-inputGroupAddon>
-                          <input pInputText placeholder="Identificador del medidor" />
-                      </p-inputGroup>
-                      <p class="text-center my-2">o</p>
-                      <div class="text-center text-sm flex align-items-center justify-content-center gap-2">
-                        <i class="pi pi-qrcode"></i>
-                         escanea el código QR
-                      </div>
-                   </div>
-                   <div class="flex justify-content-center">
-                      <p-button
-                        label="Recargar"
-                        type="submit"
-                        severity="danger"
-                        [styleClass]="'w-15rem'" />
-                   </div>
-               </form>
+              <app-meter-form (onMeterCodeChange)="onMeterCodeChange($event)" />
             </div>
           </section>
 
@@ -73,14 +56,7 @@ import { AvailablePayMethodsService } from './service';
             <p class="text-center">
               Medios de pagos disponibles
             </p>
-            <!-- slider -->
-             <ul class="list-none flex gap-3 justify-content-center p-0 pb-4">
-                @for (item of availablePayMethods$ | async; track $index) {
-                  <li>
-                    <img [src]="item" alt="Método de pago" />
-                  </li>
-                }
-             </ul>
+            <app-payment-methods [availablePayMethods$]="availablePayMethods$" />
           </footer>
       </section>
 
@@ -90,7 +66,10 @@ import { AvailablePayMethodsService } from './service';
         </div>
       </section>
     </main>
-  
+
+    <app-recharge-info [visible]="rechargeIsActive()" />
+      
+    <p-toast />
   `,
   styles: `
   .form-section{
@@ -103,10 +82,6 @@ import { AvailablePayMethodsService } from './service';
     font-size: 24px;
     line-height: 33px;
     text-align: center;
-  }
-
-  .input-container{
-    width: 470px
   }
 
   .btn-container{
@@ -156,6 +131,7 @@ import { AvailablePayMethodsService } from './service';
 })
 export class HomeComponent implements OnInit {
 
+
   /**
    * @description Servicio para obtener los métodos de pago disponibles
    */
@@ -166,6 +142,50 @@ export class HomeComponent implements OnInit {
    */
   availablePayMethods$ = this.avaibleMethodsService.getAvailablePayMethods()
 
+  /**
+   * @description Servicio para obtener los datos del medidor
+   */
+  meterService = inject(MeterService)
+
+  /**
+   * @description Servicio para mostrar mensajes
+   */
+  messageService = inject(MessageService)
+
+  /**
+   * @description computed value para determinar cuando se muestra el dialogo de recarga
+   */
+  rechargeIsActive = computed(() => {
+    if (this.meterService.state$.loading) {
+      return true
+    }
+
+    if (this.meterService.state$.error) {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Ha ocurrido un error' })
+      return false
+    }
+
+    return true
+  })
+
+
   ngOnInit(): void { }
+
+  /**
+   * @description Obtiene los datos del estado del servicio del medidor 
+   * @readonly solo lectura para evitar mutaciones y solo saber si las peticiones están en curso o han terminado, si ha ocurrido un error o si ha sido exitosa
+   */
+  get meterState() {
+    return this.meterService.state$
+  }
+
+  /**
+   * @description Realiza la petición para obtener los datos del medidor
+   * @param event código del medidor
+   */
+  onMeterCodeChange(event: number) {
+    this.meterService.getMeterData(event)
+  }
+
 
 }
