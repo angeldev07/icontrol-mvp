@@ -35,6 +35,9 @@ export class MeterService {
     return this.state()
   }
 
+  /**
+   * @description Actualiza el estado del servicio para cuando se inicia una petición
+   */
   private updateState() {
     this.state.set(
       {
@@ -47,6 +50,18 @@ export class MeterService {
   }
 
   /**
+   * @description Estado inicial del servicio
+   */
+  private get initialState(){
+    return {
+      loading: false,
+      error: false,
+      success: false,
+      data: null
+    }
+  }
+
+  /**
    * Obtiene los datos del medidor.
    * @param code serial del medidor
    */
@@ -55,10 +70,9 @@ export class MeterService {
     // simular una petición http
     setTimeout(() => {
       this.state.update(prevState => ({
-        ...prevState,
         loading: false,
-        success: false,
-        error: true,
+        success: true,
+        error: false,
         data: {
           code,
           name: 'Medidor 1',
@@ -66,6 +80,13 @@ export class MeterService {
         }
       }))
     }, 2000)
+  }
+
+  /**
+   * @description Reinicia el estado del servicio
+   */
+  resetState() {
+    this.state.set(this.initialState)
   }
 
 

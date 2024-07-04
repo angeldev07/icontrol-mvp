@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal, type OnInit } from '@angular/core';
 import { ButtonModule } from "primeng/button";
-import { AvailablePayMethodsService, MeterService } from './service';
-import { MeterFormComponent, PaymentMethodsComponent, RechargeInfoComponent } from './components';
+import { AvailablePayMethodsService, MeterService, RechargeService } from './service';
+import { MeterFormComponent, onHideEventType, PaymentMethodsComponent, RechargeInfoComponent } from './components';
 import { DialogModule } from "primeng/dialog";
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -33,21 +33,12 @@ import { MessageService } from 'primeng/api';
           </header>
           
           <section class="flex flex-column align-items-center justify-content-center w-full form-section py-4 px-0">
-            <!-- opciones a elegir  -->
-             <div class="p-2 w-20rem btn-container shadow-3 mb-4 flex gap-3 ">
-                <button class="btn w-6 active hover:shadow-1">
-                    Recargar
-                </button>
-                <button class="btn w-6 hover:shadow-1">
-                  Huésped
-                </button>
-             </div>
-            <!-- contenido principal -->
+            
             <div class="flex flex-column gap-4 align-items-center w-full ">
               <div>
                 <p class=" mb-0 title">Recarga de saldo</p>
               </div>
-              <!-- formulario -->
+              
               <app-meter-form (onMeterCodeChange)="onMeterCodeChange($event)" />
             </div>
           </section>
@@ -67,8 +58,22 @@ import { MessageService } from 'primeng/api';
       </section>
     </main>
 
-    <app-recharge-info [visible]="rechargeIsActive()" />
-      
+    @if (rechargeOpenDialog()) {
+      <app-recharge-info [visible]="rechargeOpenDialog()" (onHide)="onCloseRecharseDialog($event)" />
+    }
+
+    <p-dialog 
+      header="Datos de recarga" 
+      [(visible)]="pasarelaOpenDialog" 
+      [modal]="true"
+      [draggable]="false"
+      [maximizable]="false"
+      position="top"
+      [style]="{width: '90%', maxWidth: '600px'}"> 
+      <span>Pasarela de pago</span>
+    </p-dialog>
+
+
     <p-toast />
   `,
   styles: `
@@ -133,58 +138,61 @@ export class HomeComponent implements OnInit {
 
 
   /**
-   * @description Servicio para obtener los métodos de pago disponibles
-   */
-  avaibleMethodsService = inject(AvailablePayMethodsService)
-
-  /**
    * @description Métodos de pago disponibles
    */
-  availablePayMethods$ = this.avaibleMethodsService.getAvailablePayMethods()
+  availablePayMethods$ = inject(AvailablePayMethodsService).getAvailablePayMethods()
 
   /**
    * @description Servicio para obtener los datos del medidor
    */
-  meterService = inject(MeterService)
+  private meterService = inject(MeterService)
 
   /**
    * @description Servicio para mostrar mensajes
    */
-  messageService = inject(MessageService)
+  private messageService = inject(MessageService)
 
   /**
-   * @description computed value para determinar cuando se muestra el dialogo de recarga
+   * @description Servicio para realizar la recarga
    */
-  rechargeIsActive = computed(() => {
-    if (this.meterService.state$.loading) {
-      return true
-    }
+  private rechargeService = inject(RechargeService)
 
-    if (this.meterService.state$.error) {
-      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Ha ocurrido un error' })
-      return false
-    }
+  /**
+   * @description signal para indicar cuando el modal debe de abrirse
+   */
+  rechargeOpenDialog = signal<boolean>(false)
 
-    return true
-  })
+  /**
+   * @description signal para indicar cuando el modal de la pasarela de pago debe de abrirse
+   */
+  pasarelaOpenDialog = signal<boolean>(false)
 
 
   ngOnInit(): void { }
-
-  /**
-   * @description Obtiene los datos del estado del servicio del medidor 
-   * @readonly solo lectura para evitar mutaciones y solo saber si las peticiones están en curso o han terminado, si ha ocurrido un error o si ha sido exitosa
-   */
-  get meterState() {
-    return this.meterService.state$
-  }
 
   /**
    * @description Realiza la petición para obtener los datos del medidor
    * @param event código del medidor
    */
   onMeterCodeChange(event: number) {
+    this.rechargeOpenDialog.set(true)
     this.meterService.getMeterData(event)
+  }
+
+  /**
+   * @description Cierra el dialogo de recarga
+   */
+  onCloseRecharseDialog(event: onHideEventType) { 
+    const {action, visible} = event
+    
+    this.rechargeOpenDialog.set(visible)
+    this.meterService.resetState()
+
+    if( action === 'recharge' ){
+      this.pasarelaOpenDialog.set(true)
+    }
+
+
   }
 
 
