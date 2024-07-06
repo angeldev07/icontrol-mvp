@@ -15,7 +15,16 @@ import { AppFooterComponent, AppSidebarComponent, AppTopBarComponent } from './c
         AppSidebarComponent, 
         AppFooterComponent, 
         RouterOutlet, 
-    ]
+    ],
+    styles: `
+        @media (max-width: 991px) {
+            .layout-wrapper .layout-main-container {
+                margin-left: 0;
+                padding-left: 0;
+            }
+        }
+    
+    `
 })
 export class AppLayoutComponent implements OnDestroy {
 

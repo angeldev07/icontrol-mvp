@@ -38,6 +38,11 @@ export const routes: Routes = [
                         loadChildren: () => import('./vendings/vendings.routes').then(v => v.VENDINGS_ROUTES)
                     },
                     {
+                        path: 'contratos',
+                        loadChildren: () => import('./contrats/contrats.routes').then(c => c.CONTRACTS_ROUTES)
+                    },
+                    
+                    {
                         path: '**',
                         redirectTo: 'administradores'
                     }
